@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AHOF Flip Card Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0f;
+    --panel: #13131a;
+    --gold: #f5c842;
+    --gold2: #e0a800;
+    --red: #e8293a;
+    --blue: #1a8fff;
+    --border: #2a2a3a;
+    --match: #00e57a;
+    --card-back: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    --glow: rgba(245,200,66,0.35);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Barlow Condensed', sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* animated bg */
+  body::before {
+    content:'';
+    position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 20%, rgba(245,200,66,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(26,143,255,0.05) 0%, transparent 60%);
+  }
+
+  #app { position:relative; z-index:1; }
+
+  /* ===== SETUP ===== */
+  #setupScreen {
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:28px; padding:24px;
+  }
+
+  .logo-wrap { text-align:center; }
+  .logo-ahof {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(3rem,10vw,6rem);
+    letter-spacing:6px;
+    background: linear-gradient(135deg, var(--gold) 0%, #fff 40%, var(--gold) 80%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    filter: drop-shadow(0 0 30px var(--glow));
+    line-height:1;
+  }
+  .logo-sub {
+    font-size:.9rem; letter-spacing:8px; color:#444;
+    text-transform:uppercase; margin-top:4px;
+  }
+
+  .setup-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%; max-width: 480px;
+    display: flex; flex-direction:column; gap:20px;
+  }
+
+  .section-label {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.1rem; letter-spacing:3px; color:var(--gold);
+    border-bottom:1px solid var(--border); padding-bottom:8px;
+  }
+
+  /* member slots */
+  .members-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .member-slot {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer;
+  }
+
+  .member-avatar {
+    width:60px; height:60px; border-radius:12px;
+    border:2px solid var(--border);
+    background:#1a1a2e;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; position:relative;
+    transition:all .2s;
+    font-size:1.6rem;
+  }
+  .member-avatar:hover { border-color:var(--gold); box-shadow:0 0 12px var(--glow); transform:scale(1.05); }
+  .member-avatar img { width:100%;height:100%;object-fit:cover; }
+  .member-avatar .add-icon { color:#333; font-size:1.4rem; }
+  .member-avatar.has-photo { border-color:var(--gold); }
+  .member-avatar.has-photo::after {
+    content:'✓';
+    position:absolute;bottom:2px;right:4px;
+    font-size:.6rem;color:var(--match);font-weight:700;
+  }
+
+  .member-name {
+    font-size:.65rem; letter-spacing:1px; color:#666;
+    text-align:center; text-transform:uppercase;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    width:100%;
+  }
+  .member-name input {
+    background:transparent; border:none; border-bottom:1px solid #222;
+    color:#888; font-family:'Barlow Condensed',sans-serif;
+    font-size:.65rem; letter-spacing:1px; width:100%;
+    text-align:center; outline:none; padding:2px;
+    text-transform:uppercase;
+  }
+  .member-name input:focus { border-bottom-color:var(--gold); color:#fff; }
+
+  .difficulty-row {
+    display:flex; gap:8px;
+  }
+  .diff-btn {
+    flex:1; padding:10px 6px; border-radius:10px; border:2px solid var(--border);
+    background:transparent; color:#555; font-family:'Bebas Neue',sans-serif;
+    font-size:1rem; letter-spacing:2px; cursor:pointer; transition:all .2s;
+    text-align:center;
+  }
+  .diff-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(245,200,66,.08); }
+
+  .btn-play {
+    padding:16px; border-radius:14px; border:none;
+    background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold2));
+    color:#000; font-family:'Bebas Neue',sans-serif;
+    font-size:1.4rem; letter-spacing:4px; cursor:pointer;
+    transition:all .2s; width:100%;
+    box-shadow:0 4px 20px rgba(245,200,66,.3);
+  }
+  .btn-play:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(245,200,66,.5); }
+  .btn-play:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+  .info-note { font-size:.75rem; color:#333; text-align:center; }
+
+  /* ===== GAME SCREEN ===== */
+  #gameScreen { display:none; min-height:100vh; }
+
+  /* top bar */
+  .game-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px;
+    background:var(--panel); border-bottom:1px solid var(--border);
+    gap:10px; flex-wrap:wrap;
+  }
+  .stat-chip {
+    display:flex; flex-direction:column; align-items:center;
+    background:rgba(255,255,255,.04); border-radius:10px;
+    padding:6px 14px; min-width:65px;
+  }
+  .stat-chip .sv {
+    font-family:'Bebas Neue',sans-serif; font-size:1.5rem;
+    line-height:1; color:var(--gold);
+  }
+  .stat-chip .sl { font-size:.6rem; letter-spacing:2px; color:#555; }
+
+  .speed-indicator {
+    display:flex; flex-direction:column; align-items:center; flex:1;
+  }
+  .speed-bar-track {
+    width:100%; max-width:200px; height:6px;
+    background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden;
+  }
+  .speed-bar-fill {
+    height:100%; border-radius:3px;
+    background:linear-gradient(90deg,var(--match),var(--gold),var(--red));
+    transition:width .5s ease;
+  }
+  .speed-label { font-size:.6rem; letter-spacing:2px; color:#555; margin-top:4px; }
+
+  /* progress flash timer */
+  .flip-timer {
+    height:3px;
+    background:var(--gold);
+    transition: width linear;
+  }
+
+  /* card grid */
+  .card-grid {
+    display:grid;
+    gap:10px;
+    padding:16px;
+    justify-content:center;
+    align-content:start;
+  }
+
+  /* CARD */
+  .card {
+    perspective:800px; cursor:pointer;
+    border-radius:12px;
+  }
+  .card-inner {
+    width:100%;height:100%;
+    position:relative;
+    transform-style:preserve-3d;
+    transition:transform .4s cubic-bezier(.4,0,.2,1);
+    border-radius:12px;
+  }
+  .card.flipped .card-inner { transform:rotateY(180deg); }
+  .card.matched .card-inner { transform:rotateY(180deg); }
+  .card.matched .card-back-face { border-color:var(--match); box-shadow:0 0 18px rgba(0,229,122,.5); }
+  .card.wrong .card-inner { animation:wrongShake .35s ease; }
+  @keyframes wrongShake {
+    0%,100%{transform:rotateY(180deg) translateX(0);}
+    25%{transform:rotateY(180deg) translateX(-6px);}
+    75%{transform:rotateY(180deg) translateX(6px);}
+  }
+
+  .card-front-face, .card-back-face {
+    position:absolute;inset:0; border-radius:12px;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    overflow:hidden;
+    border:2px solid var(--border);
+  }
+
+  /* front = face down, shows card back design */
+  .card-front-face {
+    background:var(--card-back);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .card-pattern {
+    width:70%; height:70%; opacity:.15;
+    background:repeating-linear-gradient(
+      45deg, rgba(255,255,255,.1) 0px, rgba(255,255,255,.1) 2px,
+      transparent 2px, transparent 8px
+    );
+    border-radius:8px;
+  }
+  .card-logo-small {
+    position:absolute; font-family:'Bebas Neue',sans-serif;
+    font-size:.9rem; letter-spacing:2px;
+    color:rgba(255,255,255,.12);
+  }
+
+  /* back = face up, shows photo */
+  .card-back-face {
+    transform:rotateY(180deg);
+    background:#1a1a2e;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .card-back-face img {
+    width:100%; height:80%; object-fit:cover; object-position:top;
+  }
+  .card-member-name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:.75rem; letter-spacing:2px; color:rgba(255,255,255,.7);
+    padding:3px 0; text-align:center; width:100%;
+    background:rgba(0,0,0,.5);
+    position:absolute;bottom:0;
+  }
+
+  /* matched overlay */
+  .card.matched .card-back-face::before {
+    content:'✓';
+    position:absolute; top:4px;right:6px;
+    font-size:1rem; color:var(--match); font-weight:900;
+    z-index:2;
+  }
+
+  /* ===== OVERLAYS ===== */
+  .overlay {
+    position:fixed;inset:0;z-index:100;
+    background:rgba(0,0,0,.88);
+    backdrop-filter:blur(10px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:22px; padding:24px;
+  }
+  .overlay.hidden { display:none; }
+
+  .ov-big {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(2.5rem,8vw,5rem);
+    text-align:center; letter-spacing:4px;
+    animation:ovPop .5s cubic-bezier(.175,.885,.32,1.275);
+  }
+  @keyframes ovPop {
+    0%{transform:scale(.3);opacity:0;}
+    70%{transform:scale(1.08);}
+    100%{transform:scale(1);opacity:1;}
+  }
+  .ov-win { color:var(--gold); filter:drop-shadow(0 0 25px var(--gold)); }
+  .ov-lose { color:var(--red); filter:drop-shadow(0 0 25px var(--red)); }
+  .ov-info { font-size:1.1rem; color:#888; letter-spacing:2px; text-align:center; line-height:2; }
+  .ov-info span { color:var(--gold); font-weight:700; font-size:1.3rem; }
+
+  .ov-btns { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .ov-btn {
+    padding:13px 28px; border-radius:12px; border:none; cursor:pointer;
+    font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:3px;
+    transition:all .2s;
+  }
+  .ov-btn:hover { transform:translateY(-2px); }
+  .ob-gold { background:linear-gradient(135deg,var(--gold2),var(--gold)); color:#000; }
+  .ob-outline { background:transparent; border:2px solid #333; color:#666; }
+
+  /* bonus round text */
+  #speedPopup {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(2rem,6vw,3.5rem); letter-spacing:4px;
+    text-align:center; pointer-events:none; z-index:60;
+    animation:speedPop 1.2s ease-out forwards;
+    color:var(--red);
+    filter:drop-shadow(0 0 20px var(--red));
+  }
+  @keyframes speedPop {
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}
+    20%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}
+    70%{opacity:1;}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1) translateY(-40px);}
+  }
+
+  /* confetti particles */
+  .confetti-particle {
+    position:fixed; pointer-events:none; z-index:90;
+    border-radius:2px;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0%{transform:translateY(-10px) rotate(0deg);opacity:1;}
+    100%{transform:translateY(100vh) rotate(720deg);opacity:0;}
+  }
+
+  /* flash on wrong */
+  #wrongFlash {
+    position:fixed;inset:0;pointer-events:none;z-index:55;
+    background:rgba(232,41,58,0);
+    transition:background .1s;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== SETUP ===== -->
+<div id="setupScreen">
+  <div class="logo-wrap">
+    <div class="logo-ahof">AHOF</div>
+    <div class="logo-sub">FLIP CARD MEMORY GAME</div>
+  </div>
+
+  <div class="setup-box">
+    <div class="section-label">👥 I-UPLOAD ANG MGA MEMBER</div>
+
+    <div class="members-grid" id="membersGrid"></div>
+
+    <div class="info-note">I-click ang kahit sinong slot para mag-upload ng mukha • Palitan din ang pangalan</div>
+
+    <div class="section-label">⚡ DIFFICULTY</div>
+    <div class="difficulty-row">
+      <button class="diff-btn active" id="d-easy" onclick="setDiff('easy')">EASY<br><span style="font-size:.65rem;letter-spacing:1px;color:#555">8 cards</span></button>
+      <button class="diff-btn" id="d-medium" onclick="setDiff('medium')">MEDIUM<br><span style="font-size:.65rem;letter-spacing:1px;color:#555">12 cards</span></button>
+      <button class="diff-btn" id="d-hard" onclick="setDiff('hard')">HARD<br><span style="font-size:.65rem;letter-spacing:1px;color:#555">16 cards</span></button>
+    </div>
+
+    <button class="btn-play" id="btnPlay" onclick="startGame()">▶ MAGLARO</button>
+  </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="gameScreen">
+  <div class="game-bar">
+    <div class="stat-chip">
+      <div class="sv" id="statMatches">0</div>
+      <div class="sl">MATCHES</div>
+    </div>
+    <div class="speed-indicator">
+      <div class="speed-bar-track">
+        <div class="speed-bar-fill" id="speedBar" style="width:5%"></div>
+      </div>
+      <div class="speed-label" id="speedLabel">⚡ SPEED x1.0</div>
+    </div>
+    <div class="stat-chip">
+      <div class="sv" id="statMoves">0</div>
+      <div class="sl">MOVES</div>
+    </div>
+    <div class="stat-chip">
+      <div class="sv" id="statTime">0s</div>
+      <div class="sl">TIME</div>
+    </div>
+  </div>
+  <div id="timerBar" style="height:3px;background:var(--gold);width:100%;transition:width linear;"></div>
+  <div class="card-grid" id="cardGrid"></div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay hidden" id="winOverlay">
+  <div class="ov-big ov-win">🏆 NATAPOS MO!</div>
+  <div class="ov-info" id="winStats"></div>
+  <div class="ov-btns">
+    <button class="ov-btn ob-gold" onclick="restartSame()">🔄 ULIT</button>
+    <button class="ov-btn ob-outline" onclick="backToSetup()">✏ BAGUHIN</button>
+  </div>
+</div>
+<div class="overlay hidden" id="loseOverlay">
+  <div class="ov-big ov-lose">⏰ TIME'S UP!</div>
+  <div class="ov-info" id="loseStats"></div>
+  <div class="ov-btns">
+    <button class="ov-btn ob-gold" onclick="restartSame()">🔄 ULIT</button>
+    <button class="ov-btn ob-outline" onclick="backToSetup()">✏ BAGUHIN</button>
+  </div>
+</div>
+
+<div id="wrongFlash"></div>
+</div>
+
+<script>
+// ===== MEMBER DATA =====
+const DEFAULT_MEMBERS = [
+  {name:'Member 1',img:null},{name:'Member 2',img:null},
+  {name:'Member 3',img:null},{name:'Member 4',img:null},
+  {name:'Member 5',img:null},{name:'Member 6',img:null},
+  {name:'Member 7',img:null},{name:'Member 8',img:null},
+];
+let members = DEFAULT_MEMBERS.map(m=>({...m}));
+let difficulty = 'easy';
+const DIFF_PAIRS = {easy:4, medium:6, hard:8};
+
+// ===== GAME STATE =====
+let G = {
+  cards:[],
+  flipped:[],
+  matched:0,
+  totalPairs:0,
+  moves:0,
+  startTime:0,
+  elapsed:0,
+  timer:null,
+  revealTime:1.0,   // seconds card stays flipped (decreases over time!)
+  flipTimeout:null,
+  locked:false,
+  gameRunning:false,
+  speedMultiplier:1.0,
+  cardTimeouts:[],
+};
+
+// ===== BUILD SETUP UI =====
+function buildSetupGrid(){
+  const grid = document.getElementById('membersGrid');
+  grid.innerHTML='';
+  members.forEach((m,i)=>{
+    const slot=document.createElement('div');
+    slot.className='member-slot';
+    slot.onclick=()=>triggerUpload(i);
+    slot.innerHTML=`
+      <div class="member-avatar ${m.img?'has-photo':''}" id="mav-${i}">
+        ${m.img?`<img src="${m.img}" alt="">`:'<span class="add-icon">＋</span>'}
+      </div>
+      <div class="member-name"><input type="text" value="${m.name}" maxlength="10"
+        placeholder="Pangalan"
+        onclick="event.stopPropagation()"
+        oninput="members[${i}].name=this.value"
+        id="mname-${i}"></div>
+    `;
+    grid.appendChild(slot);
+  });
+}
+
+function triggerUpload(idx){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      members[idx].img=ev.target.result;
+      const av=document.getElementById('mav-'+idx);
+      av.classList.add('has-photo');
+      av.innerHTML=`<img src="${ev.target.result}" alt="">`;
+    };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+function setDiff(d){
+  difficulty=d;
+  ['easy','medium','hard'].forEach(x=>{
+    document.getElementById('d-'+x).classList.toggle('active',x===d);
+  });
+}
+
+// ===== START GAME =====
+function startGame(){
+  const pairs = DIFF_PAIRS[difficulty];
+  // gather available members (only those with photos, or use placeholders)
+  let pool = members.filter(m=>m.img);
+  // if not enough photos, fill with emoji placeholders
+  const EMOJIS=['😊','😎','🤩','😄','🥳','😆','🙂','😏'];
+  while(pool.length < pairs){
+    const idx=pool.length;
+    pool.push({name:'AHOF '+(idx+1), img:null, emoji:EMOJIS[idx%EMOJIS.length]});
+  }
+  pool=pool.slice(0,pairs);
+
+  // create pairs
+  let deck=[];
+  pool.forEach((m,i)=>{
+    deck.push({id:i,name:m.name,img:m.img,emoji:m.emoji||null,paired:false});
+    deck.push({id:i,name:m.name,img:m.img,emoji:m.emoji||null,paired:false});
+  });
+  // shuffle
+  for(let i=deck.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [deck[i],deck[j]]=[deck[j],deck[i]];
+  }
+
+  G.cards=deck;
+  G.flipped=[]; G.matched=0; G.moves=0;
+  G.totalPairs=pairs;
+  G.startTime=Date.now(); G.elapsed=0;
+  G.revealTime=1.4;
+  G.locked=false;
+  G.speedMultiplier=1.0;
+  G.gameRunning=true;
+  G.cardTimeouts=[];
+
+  document.getElementById('setupScreen').style.display='none';
+  document.getElementById('gameScreen').style.display='block';
+  document.getElementById('winOverlay').classList.add('hidden');
+  document.getElementById('loseOverlay').classList.add('hidden');
+
+  buildCardGrid();
+  updateStats();
+
+  if(G.timer) clearInterval(G.timer);
+  G.timer=setInterval(gameTick,500);
+}
+
+function buildCardGrid(){
+  const grid=document.getElementById('cardGrid');
+  grid.innerHTML='';
+
+  const count=G.cards.length;
+  const cols = count<=8 ? 4 : count<=12 ? 4 : 4;
+  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+
+  // card size based on viewport
+  const vw=Math.min(window.innerWidth,600);
+  const gap=10;
+  const cardW=Math.floor((vw-32-(cols-1)*gap)/cols);
+  const cardH=Math.floor(cardW*1.35);
+  grid.style.maxWidth=(vw)+'px';
+  grid.style.margin='0 auto';
+
+  G.cards.forEach((card,idx)=>{
+    const el=document.createElement('div');
+    el.className='card';
+    el.style.width=cardW+'px'; el.style.height=cardH+'px';
+    el.dataset.idx=idx;
+    el.innerHTML=`
+      <div class="card-inner">
+        <div class="card-front-face">
+          <div class="card-pattern"></div>
+          <div class="card-logo-small">AHOF</div>
+        </div>
+        <div class="card-back-face">
+          ${card.img
+            ? `<img src="${card.img}" alt="${card.name}">`
+            : `<div style="font-size:${cardH*.35}px;text-align:center;line-height:${cardH*.7}px">${card.emoji||'😊'}</div>`
+          }
+          <div class="card-member-name">${card.name.toUpperCase()}</div>
+        </div>
+      </div>
+    `;
+    el.addEventListener('click',()=>flipCard(idx));
+    grid.appendChild(el);
+  });
+}
+
+// ===== FLIP LOGIC =====
+function flipCard(idx){
+  if(G.locked || !G.gameRunning) return;
+  const card=G.cards[idx];
+  const el=document.querySelector(`.card[data-idx="${idx}"]`);
+  if(!el) return;
+  if(el.classList.contains('flipped')||el.classList.contains('matched')) return;
+  if(G.flipped.length>=2) return;
+
+  el.classList.add('flipped');
+  G.flipped.push(idx);
+
+  if(G.flipped.length===2){
+    G.moves++;
+    G.locked=true;
+    updateStats();
+    checkMatch();
+  }
+}
+
+function checkMatch(){
+  const [a,b]=G.flipped;
+  const ca=G.cards[a], cb=G.cards[b];
+  const ea=document.querySelector(`.card[data-idx="${a}"]`);
+  const eb=document.querySelector(`.card[data-idx="${b}"]`);
+
+  if(ca.id===cb.id){
+    // MATCH!
+    ea.classList.add('matched'); eb.classList.add('matched');
+    G.matched++;
+    G.flipped=[];
+    G.locked=false;
+    updateStats();
+    spawnConfetti();
+    if(G.matched===G.totalPairs) setTimeout(triggerWin,400);
+  } else {
+    // Wrong — flip back after revealTime
+    ea.classList.add('wrong'); eb.classList.add('wrong');
+    flashWrong();
+    const t=setTimeout(()=>{
+      ea.classList.remove('flipped','wrong');
+      eb.classList.remove('flipped','wrong');
+      G.flipped=[];
+      G.locked=false;
+    }, Math.max(300, G.revealTime*1000));
+    G.cardTimeouts.push(t);
+  }
+}
+
+// ===== TICK =====
+function gameTick(){
+  if(!G.gameRunning) return;
+  G.elapsed=Math.floor((Date.now()-G.startTime)/1000);
+
+  // Speed increases every 15 seconds
+  G.speedMultiplier=1.0 + (G.elapsed/15)*0.25;
+  G.revealTime=Math.max(0.25, 1.4/(G.speedMultiplier));
+
+  // update speed bar
+  const pct=Math.min(100,(G.speedMultiplier-1)*100/3);
+  document.getElementById('speedBar').style.width=pct+'%';
+  document.getElementById('speedLabel').textContent=`⚡ SPEED x${G.speedMultiplier.toFixed(1)}`;
+
+  // Show popup on speed milestones
+  if(G.elapsed>0 && G.elapsed%15===0 && G.elapsed<300){
+    showSpeedPopup();
+  }
+
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('statMatches').textContent=G.matched+'/'+G.totalPairs;
+  document.getElementById('statMoves').textContent=G.moves;
+  document.getElementById('statTime').textContent=G.elapsed+'s';
+}
+
+function showSpeedPopup(){
+  const existing=document.getElementById('speedPopup');
+  if(existing) existing.remove();
+  const el=document.createElement('div');
+  el.id='speedPopup';
+  el.textContent='⚡ FASTER! x'+G.speedMultiplier.toFixed(1);
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1200);
+}
+
+// ===== WIN/LOSE =====
+function triggerWin(){
+  G.gameRunning=false;
+  clearInterval(G.timer);
+  G.cardTimeouts.forEach(t=>clearTimeout(t));
+  const score=Math.max(0, 1000 - G.moves*5 + Math.floor(G.elapsed<30?200:100));
+  document.getElementById('winStats').innerHTML=
+    `Natapos sa <span>${G.elapsed}s</span> • <span>${G.moves}</span> moves<br>Score: <span>${score}</span>`;
+  document.getElementById('winOverlay').classList.remove('hidden');
+  for(let i=0;i<60;i++) setTimeout(spawnConfetti,i*60);
+}
+
+function restartSame(){
+  document.getElementById('winOverlay').classList.add('hidden');
+  document.getElementById('loseOverlay').classList.add('hidden');
+  startGame();
+}
+function backToSetup(){
+  G.gameRunning=false; clearInterval(G.timer);
+  document.getElementById('winOverlay').classList.add('hidden');
+  document.getElementById('loseOverlay').classList.add('hidden');
+  document.getElementById('gameScreen').style.display='none';
+  document.getElementById('setupScreen').style.display='flex';
+}
+
+// ===== EFFECTS =====
+function flashWrong(){
+  const el=document.getElementById('wrongFlash');
+  el.style.background='rgba(232,41,58,0.18)';
+  setTimeout(()=>el.style.background='rgba(232,41,58,0)',300);
+}
+
+function spawnConfetti(){
+  const colors=['#f5c842','#e8293a','#1a8fff','#00e57a','#ff88aa','#ffffff'];
+  for(let i=0;i<6;i++){
+    const el=document.createElement('div');
+    el.className='confetti-particle';
+    const size=4+Math.random()*8;
+    el.style.cssText=`
+      width:${size}px;height:${size*2}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      left:${Math.random()*100}vw;
+      top:-10px;
+      animation-duration:${1.5+Math.random()*1.5}s;
+      animation-delay:${Math.random()*.3}s;
+    `;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3000);
+  }
+}
+
+// ===== INIT =====
+buildSetupGrid();
+pickClass && null; // noop
+
+// handle resize
+window.addEventListener('resize',()=>{
+  if(G.gameRunning) buildCardGrid();
+});
+</script>
+</body>
+</html>
